@@ -1,0 +1,48 @@
+name: Carvana Inventory Scrape
+ 
+on:
+  workflow_dispatch:
+    inputs:
+      zip5:
+        description: "5-digit delivery zip code to search from"
+        required: true
+        default: "63118"
+      max_pages:
+        description: "Optional cap on pages to walk (leave blank for full run)"
+        required: false
+        default: ""
+ 
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120 
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+ 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+ 
+      - name: Install dependencies
+        run: pip install requests
+ 
+      - name: Run scraper
+        env:
+          ZIP5: ${{ inputs.zip5 }}
+          MAX_PAGES: ${{ inputs.max_pages }}
+        run: |
+          args=(--zip5 "$ZIP5" --out-dir ./output)
+          if [ -n "$MAX_PAGES" ]; then
+            args+=(--max-pages "$MAX_PAGES")
+          fi
+          python carvana_scraper.py "${args[@]}"
+ 
+      - name: Upload results as build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: carvana-inventory-${{ inputs.zip5 }}
+          path: output/
+          retention-days: 14
+ 

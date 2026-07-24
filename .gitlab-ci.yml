@@ -1,0 +1,35 @@
+stages:
+  - lint
+  - scrape
+
+variables:
+  ZIP5: "63118"
+  MAX_PAGES: ""
+
+lint:
+  stage: lint
+  image: python:3.14-slim
+  script:
+    - pip install --quiet ruff
+    - ruff check .
+
+scrape:
+  stage: scrape
+  image: python:3.14-slim
+  needs:
+    - lint
+  rules:
+    - when: manual
+  script:
+    - pip install --quiet -r requirements.txt
+    - |
+      if [ -n "$MAX_PAGES" ]; then
+        python carvana_scraper.py --zip5 "$ZIP5" --out-dir ./output --max-pages "$MAX_PAGES"
+      else
+        python carvana_scraper.py --zip5 "$ZIP5" --out-dir ./output
+      fi
+  artifacts:
+    name: "carvana-inventory-$ZIP5"
+    expire_in: 14 days
+    paths:
+      - output/
